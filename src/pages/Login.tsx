@@ -28,6 +28,7 @@ const Login = () => {
             if (res.token) {
                 // Direct Success (e.g. Admin)
                 localStorage.setItem('user', JSON.stringify({ username: res.username, role: res.role }));
+                localStorage.setItem('token', res.token); // SAVE TOKEN
                 setMessage('Login Successful! Redirecting...');
                 setTimeout(() => navigate('/dashboard'), 500);
             } else if (res.message === 'OTP sent to email') {

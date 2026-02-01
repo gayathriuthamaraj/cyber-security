@@ -19,9 +19,11 @@ const OTPVerification = () => {
         try {
             const res = await authService.verifyOTP(username, otp);
             if (res.token) {
+                localStorage.setItem('user', JSON.stringify({ username, role: res.role }));
+                localStorage.setItem('token', res.token); // SAVE TOKEN
                 setMessage('Login Successful! Redirecting...');
                 // Simulate redirect to dashboard
-                setTimeout(() => alert('Welcome to the Secure Dashboard!'), 500);
+                setTimeout(() => navigate('/dashboard'), 500); // Fixed from alert to navigate
             } else {
                 setMessage(res.message); setError(true);
             }

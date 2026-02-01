@@ -41,10 +41,11 @@ export const authService = {
 
 // --- Data Service (New) ---
 export const dataService = {
-    getHeaders(username: string) {
+    getHeaders(_username?: string) {
+        const token = localStorage.getItem('token');
         return {
             'Content-Type': 'application/json',
-            'x-username': username // Simulating Bearer Token
+            'Authorization': `Bearer ${token}`
         };
     },
 
