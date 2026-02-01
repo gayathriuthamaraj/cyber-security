@@ -4,7 +4,7 @@ import { dataService } from '../services/auth.service';
 
 interface User {
     username: string;
-    role: 'admin' | 'group_admin' | 'user';
+    role: 'admin' | 'faculty' | 'student';
 }
 
 interface Group {
@@ -86,6 +86,8 @@ const Dashboard = () => {
 
     if (!user) return <div>Loading...</div>;
 
+    const roleColor = user.role === 'admin' ? '#ef4444' : user.role === 'faculty' ? '#f59e0b' : '#3b82f6';
+
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -93,7 +95,7 @@ const Dashboard = () => {
                 <div style={{ textAlign: 'right' }}>
                     <h3>{user.username}</h3>
                     <span style={{
-                        background: user.role === 'admin' ? '#ef4444' : user.role === 'group_admin' ? '#f59e0b' : '#3b82f6',
+                        background: roleColor,
                         padding: '4px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold'
                     }}>
                         {user.role.toUpperCase()}
@@ -154,10 +156,10 @@ const Dashboard = () => {
                                 {selectedGroup.name}
                             </h2>
 
-                            {/* Post Announcement Form - Only for Admin or Group Admin */}
-                            {(user.role === 'admin' || user.role === 'group_admin') && (
+                            {/* Post Announcement: ADMIN or FACULTY */}
+                            {(user.role === 'admin' || user.role === 'faculty') && (
                                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '2rem' }}>
-                                    <h4>Post Announcement</h4>
+                                    <h4>Post Announcement (Encrypted)</h4>
                                     <form onSubmit={handleCreateAnnouncement}>
                                         <input
                                             placeholder="Title"
@@ -182,16 +184,27 @@ const Dashboard = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 {announcements.length === 0 && <p style={{ color: '#94a3b8' }}>No announcements yet.</p>}
                                 {announcements.map(a => (
-                                    <div key={a.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px' }}>
+                                    <div key={a.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '8px', position: 'relative' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                             <h4 style={{ margin: 0, color: 'var(--primary-color)' }}>{a.title}</h4>
-                                            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+
+                                            {/* DELETE Button: ADMIN ONLY */}
+                                            {user.role === 'admin' && (
+                                                <button style={{
+                                                    padding: '2px 8px', fontSize: '0.7rem', background: '#ef4444',
+                                                    marginLeft: '10px', height: 'fit-content'
+                                                }}>
+                                                    Delete
+                                                </button>
+                                            )}
+
+                                            <span style={{ fontSize: '0.8rem', color: '#94a3b8', marginLeft: 'auto' }}>
                                                 {new Date(a.timestamp).toLocaleDateString()}
                                             </span>
                                         </div>
                                         <p style={{ margin: 0, fontSize: '0.9rem' }}>{a.content}</p>
                                         <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#94a3b8' }}>
-                                            Posted by {a.authorName}
+                                            Posted by {a.authorName} {a.content === '[Decryption Failed]' ? '(Error)' : '🔒'}
                                         </div>
                                     </div>
                                 ))}
