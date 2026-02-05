@@ -2,20 +2,11 @@ const API_URL = 'http://localhost:5001/api';
 
 // --- Auth Service ---
 export const authService = {
-    async initRegister(username: string, email: string, password: string) {
-        const response = await fetch(`${API_URL}/auth/register/init`, {
+    async register(username: string, email: string, password: string) {
+        const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, email, password }),
-        });
-        return response.json();
-    },
-
-    async completeRegister(email: string, otp: string) {
-        const response = await fetch(`${API_URL}/auth/register/complete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, otp }),
         });
         return response.json();
     },

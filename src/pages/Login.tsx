@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
     const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -11,12 +12,12 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
 
-    // Flow States
-    const [regStep, setRegStep] = useState(1); // 1: Details, 2: Verification
+    const [loginStep, setLoginStep] = useState(1); // 1: Creds, 2: OTP
     const [message, setMessage] = useState('');
     const [error, setError] = useState(false);
 
     const navigate = useNavigate();
+    const { login: authLogin } = useAuth();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,14 +26,16 @@ const Login = () => {
         try {
             const res = await authService.login(username, password);
 
-            if (res.token) {
-                // Direct Success (e.g. Admin)
-                localStorage.setItem('user', JSON.stringify({ username: res.username, role: res.role }));
-                localStorage.setItem('token', res.token); // SAVE TOKEN
+            if (res.token && res.user) {
+                // Direct Success (e.g. Admin or legacy SFA)
+                authLogin(res.user, res.token);
                 setMessage('Login Successful! Redirecting...');
                 setTimeout(() => navigate('/dashboard'), 500);
-            } else if (res.message === 'OTP sent to email') {
-                navigate('/verify-otp', { state: { username, email: res.email } });
+            } else if (res.step === 'MFA_REQUIRED') {
+                // Step 2: Show OTP Input
+                setLoginStep(2);
+                setMessage(res.message || 'Enter the code sent to your email.');
+                setError(false);
             } else {
                 setMessage(res.message); setError(true);
             }
@@ -41,40 +44,40 @@ const Login = () => {
         }
     };
 
-    const handleRegisterInit = async (e: React.FormEvent) => {
+    const handleLoginVerifyOtp = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(''); setError(false);
 
         try {
-            const res = await authService.initRegister(username, email, password);
-            if (res.message.includes('OTP sent')) {
-                setRegStep(2);
-                setMessage('OTP sent to your email. Please verify.'); setError(false);
+            const res = await authService.verifyOTP(username, otp);
+
+            if (res.token && res.user) {
+                authLogin(res.user, res.token);
+                setMessage('MFA Verified! Redirecting...');
+                setTimeout(() => navigate('/dashboard'), 500);
+            } else {
+                setMessage(res.message || 'Invalid OTP'); setError(true);
+            }
+        } catch (err) {
+            setMessage('Verification failed'); setError(true);
+        }
+    };
+
+    const handleRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMessage(''); setError(false);
+
+        try {
+            const res = await authService.register(username, email, password);
+            if (res.id) { // User created
+                setMessage('Account created! Please login.'); setError(false);
+                setActiveTab('login');
+                setPassword('');
             } else {
                 setMessage(res.message); setError(true);
             }
         } catch (err) {
             setMessage('Registration failed'); setError(true);
-        }
-    };
-
-    const handleRegisterComplete = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setMessage(''); setError(false);
-
-        try {
-            const res = await authService.completeRegister(email, otp);
-            if (res.message === 'User registered successfully') {
-                setMessage('Account created! Please login.'); setError(false);
-                setRegStep(1);
-                setActiveTab('login');
-                // Clear fields
-                setPassword(''); setOtp('');
-            } else {
-                setMessage(res.message); setError(true);
-            }
-        } catch (err) {
-            setMessage('Verification failed'); setError(true);
         }
     };
 
@@ -85,7 +88,7 @@ const Login = () => {
             <div className="tabs">
                 <div
                     className={`tab ${activeTab === 'login' ? 'active' : ''}`}
-                    onClick={() => { setActiveTab('login'); setMessage(''); }}
+                    onClick={() => { setActiveTab('login'); setMessage(''); setLoginStep(1); }}
                 >
                     Login
                 </div>
@@ -97,7 +100,7 @@ const Login = () => {
                 </div>
             </div>
 
-            {activeTab === 'login' && (
+            {activeTab === 'login' && loginStep === 1 && (
                 <form onSubmit={handleLogin} className="input-group">
                     <input
                         type="text" placeholder="Username"
@@ -111,8 +114,27 @@ const Login = () => {
                 </form>
             )}
 
-            {activeTab === 'register' && regStep === 1 && (
-                <form onSubmit={handleRegisterInit} className="input-group">
+            {activeTab === 'login' && loginStep === 2 && (
+                <form onSubmit={handleLoginVerifyOtp} className="input-group">
+                    <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
+                        Enter 2FA Code
+                    </p>
+                    <input
+                        type="text" placeholder="6-digit OTP"
+                        value={otp} onChange={e => setOtp(e.target.value)} required autoFocus
+                    />
+                    <button type="submit">Verify Login</button>
+                    <div
+                        style={{ fontSize: '0.8rem', cursor: 'pointer', marginTop: '10px', color: '#38bdf8' }}
+                        onClick={() => { setLoginStep(1); setOtp(''); }}
+                    >
+                        Back to Credentials
+                    </div>
+                </form>
+            )}
+
+            {activeTab === 'register' && (
+                <form onSubmit={handleRegister} className="input-group">
                     <input
                         type="text" placeholder="Username"
                         value={username} onChange={e => setUsername(e.target.value)} required
@@ -125,26 +147,7 @@ const Login = () => {
                         type="password" placeholder="Password"
                         value={password} onChange={e => setPassword(e.target.value)} required
                     />
-                    <button type="submit">Send Verification Code</button>
-                </form>
-            )}
-
-            {activeTab === 'register' && regStep === 2 && (
-                <form onSubmit={handleRegisterComplete} className="input-group">
-                    <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
-                        We sent a code to <br /><b style={{ color: 'white' }}>{email}</b>
-                    </p>
-                    <input
-                        type="text" placeholder="Enter Registration OTP"
-                        value={otp} onChange={e => setOtp(e.target.value)} required
-                    />
-                    <button type="submit">Verify & Create Account</button>
-                    <div
-                        style={{ fontSize: '0.8rem', cursor: 'pointer', marginTop: '10px', color: '#38bdf8' }}
-                        onClick={() => setRegStep(1)}
-                    >
-                        Back to details
-                    </div>
+                    <button type="submit">Create Account</button>
                 </form>
             )}
 

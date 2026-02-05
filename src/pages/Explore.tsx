@@ -3,34 +3,56 @@ import { api } from '../services/api';
 import GroupCard from '../components/GroupCard';
 import Sidebar from '../components/Sidebar';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Explore: React.FC = () => {
     const [groups, setGroups] = useState<any[]>([]);
     const navigate = useNavigate();
+    const { user, isAdmin, logout } = useAuth();
 
     useEffect(() => {
+        if (!user) {
+            navigate('/');
+            return;
+        }
         fetchGroups();
-    }, []);
+    }, [user, navigate]);
 
     const fetchGroups = async () => {
-        const res = await api.get('/groups');
-        setGroups(res.data);
+        try {
+            const res = await api.get('/groups');
+            setGroups(res.data);
+        } catch (err) {
+            console.error('Failed to fetch groups', err);
+        }
     };
 
     const handleJoin = async (id: string, joinMode: string) => {
-        if (joinMode === 'INVITE_ONLY') return;
         try {
             await api.post(`/groups/${id}/join`);
-            alert('Joined or Requested!');
-            // Refresh logic
-        } catch (err) {
-            alert('Join failed');
+            if (joinMode === 'OPEN') {
+                alert('Successfully joined the group!');
+            } else if (joinMode === 'REQUEST') {
+                alert('Join request submitted! Waiting for approval.');
+            }
+            fetchGroups(); // Refresh
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Join failed');
         }
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
+
+    const isUserMember = (group: any) => {
+        return group.members && group.members.some((m: any) => m.userId === user?.id);
     };
 
     return (
         <div className="app-layout">
-            <Sidebar isAdmin={false} onLogout={() => navigate('/')} />
+            <Sidebar isAdmin={isAdmin} onLogout={handleLogout} />
             <div className="main-content">
                 <h2>Explore Communities</h2>
                 <div className="group-grid">
@@ -41,8 +63,9 @@ const Explore: React.FC = () => {
                             name={group.name}
                             description={group.description}
                             joinMode={group.joinMode}
-                            isMember={false} // Assume false for explore
+                            isMember={isUserMember(group)}
                             onJoin={() => handleJoin(group.id, group.joinMode)}
+                            onView={() => navigate(`/groups/${group.id}`)}
                         />
                     ))}
                 </div>

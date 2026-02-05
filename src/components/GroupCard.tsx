@@ -15,7 +15,9 @@ const GroupCard: React.FC<GroupCardProps> = ({ name, description, joinMode, isMe
         <div className="group-card">
             <div className="group-header">
                 <h4>{name}</h4>
-                <span className={`badge ${joinMode.toLowerCase()}`}>{joinMode.replace('_', ' ')}</span>
+                <span className={`badge ${joinMode.toLowerCase()}`}>
+                    {joinMode === 'REQUEST' ? 'Request Only' : joinMode.replace('_', ' ')}
+                </span>
             </div>
             <p>{description}</p>
             <div className="group-actions">
@@ -23,7 +25,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ name, description, joinMode, isMe
                     <button onClick={onView} className="btn-primary">View Channel</button>
                 ) : (
                     <button onClick={onJoin} className="btn-secondary" disabled={joinMode === 'INVITE_ONLY'}>
-                        {joinMode === 'INVITE_ONLY' ? 'Invite Only' : 'Join Group'}
+                        {joinMode === 'INVITE_ONLY' ? 'Invite Only' : joinMode === 'REQUEST' ? 'Request Only' : 'Join Group'}
                     </button>
                 )}
             </div>

@@ -2,55 +2,94 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import GroupCard from '../components/GroupCard';
 import Sidebar from '../components/Sidebar';
+import RequestGroupCreation from '../components/RequestGroupCreation';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard: React.FC = () => {
-    const [myGroups, setMyGroups] = useState<any[]>([]);
+    const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const [myGroups, setMyGroups] = useState<any[]>([]);
+    const [showRequestModal, setShowRequestModal] = useState(false);
 
     useEffect(() => {
-        // Fetch All Groups then Filter for "My Groups"
-        // Ideally backend has /groups/me endpoint, but we can filter client side from /groups 
-        // OR /groups returns all, we check membership.
-        // GroupController.listGroups returns ALL for now.
-        // We'll filter client side based on some flag or just show all for now and rename "My Groups" later
-        // Actually the backend `getGroup` checks access, `listGroups` returns all.
-        // We need a way to know if I am a member. 
-        // `GroupCard` takes `isMember`.
-        // We can fetch all and check `members` map, but members map isn't returned in full list usually?
-        // Let's assume listGroups returns simplified objects.
-        // I will just fetch all groups for now and mock the "My Group" logic or check if I can join.
-
+        if (!user) {
+            navigate('/');
+            return;
+        }
         fetchGroups();
-    }, []);
+    }, [user, navigate]);
 
     const fetchGroups = async () => {
-        const res = await api.get('/groups');
-        // Filter those where I am member... (Need user ID or similar)
-        // For simple demo, I'll just show all in Explore and Dashboard checks boolean? 
-        // Let's just make Dashboard = Explore for now or separate based on filtering if possible.
-        setMyGroups(res.data);
+        try {
+            const res = await api.get('/groups');
+            // Filter groups where user is a member
+            const filtered = res.data.filter((group: any) =>
+                group.members && group.members.some((m: any) => m.userId === user?.id)
+            );
+            setMyGroups(filtered);
+        } catch (err) {
+            console.error('Failed to fetch groups', err);
+        }
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
     };
 
     return (
         <div className="app-layout">
-            <Sidebar isAdmin={false} onLogout={() => navigate('/')} />
+            <Sidebar isAdmin={false} onLogout={handleLogout} />
             <div className="main-content">
-                <h2>My Communities</h2>
-                <div className="group-grid">
-                    {myGroups.map(group => (
-                        <GroupCard
-                            key={group.id}
-                            id={group.id}
-                            name={group.name}
-                            description={group.description}
-                            joinMode={group.joinMode}
-                            isMember={true} // Assumption for Dashboard
-                            onView={() => navigate(`/groups/${group.id}`)}
-                        />
-                    ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h2>My Communities</h2>
+                    <button
+                        onClick={() => setShowRequestModal(true)}
+                        style={{
+                            padding: '0.75rem 1.5rem',
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                        + Request New Group
+                    </button>
                 </div>
+
+                {myGroups.length === 0 ? (
+                    <p style={{ color: '#94a3b8', marginTop: '1rem' }}>
+                        You haven't joined any groups yet. Visit <span style={{ color: '#3b82f6', cursor: 'pointer' }} onClick={() => navigate('/explore')}>Explore</span> to find communities!
+                    </p>
+                ) : (
+                    <div className="group-grid">
+                        {myGroups.map(group => (
+                            <GroupCard
+                                key={group.id}
+                                id={group.id}
+                                name={group.name}
+                                description={group.description}
+                                joinMode={group.joinMode}
+                                isMember={true}
+                                onView={() => navigate(`/groups/${group.id}`)}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
+
+            {showRequestModal && (
+                <RequestGroupCreation
+                    onClose={() => setShowRequestModal(false)}
+                    onSuccess={() => fetchGroups()}
+                />
+            )}
         </div>
     );
 };

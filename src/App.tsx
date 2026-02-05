@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Explore from './pages/Explore';
 import GroupView from './pages/GroupView';
 import AdminPanel from './pages/AdminPanel';
+import MyRequests from './pages/MyRequests';
+import ManagedGroups from './pages/ManagedGroups';
 import './App.css';
 
 function App() {
@@ -17,6 +19,8 @@ function App() {
 
           {/* Protected Routes */}
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/my-requests" element={<MyRequests />} />
+          <Route path="/managed-groups" element={<ManagedGroups />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/groups/:id" element={<GroupView />} />
           <Route path="/admin" element={<AdminPanel />} />

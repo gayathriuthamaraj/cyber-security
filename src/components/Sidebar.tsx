@@ -19,14 +19,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isAdmin, onLogout }) => {
             </div>
             <div className="sidebar-menu">
                 <button className={`menu-item ${isActive('/dashboard')}`} onClick={() => navigate('/dashboard')}>
-                    📂 My Groups
+                    My Groups
+                </button>
+                <button className={`menu-item ${isActive('/managed-groups')}`} onClick={() => navigate('/managed-groups')}>
+                    My Communities
+                </button>
+                <button className={`menu-item ${isActive('/my-requests')}`} onClick={() => navigate('/my-requests')}>
+                    My Requests
                 </button>
                 <button className={`menu-item ${isActive('/explore')}`} onClick={() => navigate('/explore')}>
-                    🌍 Explore
+                    Explore
                 </button>
                 {isAdmin && (
                     <button className={`menu-item ${isActive('/admin')}`} onClick={() => navigate('/admin')}>
-                        🛡️ Admin Panel
+                        Admin Panel
                     </button>
                 )}
             </div>
