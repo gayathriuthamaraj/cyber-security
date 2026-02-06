@@ -38,6 +38,7 @@ const GroupView = () => {
     const [modalType, setModalType] = useState<'BECOME_GROUP_ADMIN' | 'REQUEST_POST_ACCESS' | null>(null);
     const [isMember, setIsMember] = useState(false);
     const [isGroupAdmin, setIsGroupAdmin] = useState(false);
+    const [permissions, setPermissions] = useState<string | null>(null);
 
     useEffect(() => {
         fetchGroupData();
@@ -63,11 +64,13 @@ const GroupView = () => {
             if (groupRes.data.currentUserPermissions) {
                 setIsMember(groupRes.data.currentUserPermissions.isMember);
                 setIsGroupAdmin(groupRes.data.currentUserPermissions.isGroupAdmin);
+                setPermissions(groupRes.data.currentUserPermissions.permissions);
             } else {
                 // Fallback (shouldn't happen with updated backend)
                 const currentMember = groupRes.data.members?.find((m: any) => m.userId === user?.id);
                 setIsMember(!!currentMember);
                 setIsGroupAdmin(currentMember?.role === 'admin');
+                setPermissions(currentMember?.permissions || (currentMember?.role === 'admin' ? 'admin' : 'member'));
             }
         } catch (err) {
             console.error('Failed to fetch group data:', err);
@@ -103,7 +106,8 @@ const GroupView = () => {
     const canPost = isMember && (
         group.postMode === 'OPEN_POSTING' ||
         isGroupAdmin ||
-        group.postMode === 'APPROVED_MEMBERS'
+        (group.postMode === 'APPROVED_MEMBERS' &&
+            ['post_access', 'grant_access', 'admin', 'super_admin'].includes(permissions || 'member'))
     );
 
     return (
